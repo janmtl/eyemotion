@@ -1,6 +1,0 @@
-[I 14:37:05.100 NotebookApp] Serving notebooks from local directory: /Users/yan/cloud/dev/eyemotion
-[I 14:37:05.100 NotebookApp] 0 active kernels 
-[I 14:37:05.100 NotebookApp] The IPython Notebook is running at: http://localhost:8888/
-[I 14:37:05.100 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
-[C 14:37:19.852 NotebookApp] received signal 15, stopping
-[I 14:37:19.852 NotebookApp] Shutting down kernels
