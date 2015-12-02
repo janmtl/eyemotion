@@ -4,7 +4,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-def _acplot(v, s, labels, conditions, ages, stat, bin_width, PAL):
+def _acplot(v, s, labels, conditions, ages, stat, bin_width, PAL,
+            plot_error_bars=True):
     vps, sps, ts = {}, {}, {}
 
     for age in ages:
@@ -38,17 +39,14 @@ def _acplot(v, s, labels, conditions, ages, stat, bin_width, PAL):
     mdpts = 0.5*(edges[:-1]+edges[1:])
 
     # On to the real plotting
-    ymax = np.max(np.max(v)) + np.max(np.max(s))
-    ymin = np.min(np.min(v)) - np.max(np.max(s))
-    yrange = ymax - ymin
-    ymax = ymax + 0.15*yrange
-    ymin = ymin - 0.15*yrange
-
-    fig, axs = plt.subplots(len(ages), 1, figsize=(7, 7), sharex=True)
-    fig.subplots_adjust(hspace=0.1)
+    fig, axs = plt.subplots(len(ages), 1, figsize=(7, 7),
+                            sharex=True, sharey=False)
+    fig.subplots_adjust(hspace=0.25)
 
     for axidx, age in enumerate(ages):
-
+        axmaxs = []
+        axmins = []
+        axranges = []
         for condidx, condition in enumerate(conditions):
             vp = vps[age][condition]
             sp = sps[age][condition]
@@ -56,9 +54,16 @@ def _acplot(v, s, labels, conditions, ages, stat, bin_width, PAL):
             axs[axidx].plot(t, vp,
                             label=age+' '+condition,
                             color=PAL[age][condition])
-            axs[axidx].fill_between(t, (vp - sp), (vp + sp),
-                                    alpha=0.4,
-                                    color=PAL[age][condition])
+            if plot_error_bars:
+                axs[axidx].fill_between(t, (vp - sp), (vp + sp),
+                                        alpha=0.4,
+                                        color=PAL[age][condition])
+            axmaxs.append(np.max(vp) + np.max(sp))
+            axmins.append(np.min(vp) - np.max(sp))
+            axranges.append(np.max(vp) - np.min(vp) + 2*np.max(sp))
+
+        axs[axidx].set_ylim([min(axmins)-0.15*max(axranges),
+                             max(axmaxs)+0.15*max(axranges)])
 
         even = 0
         for labelidx, label in enumerate(labels):
@@ -68,7 +73,7 @@ def _acplot(v, s, labels, conditions, ages, stat, bin_width, PAL):
             axs[axidx].axvline(edges[1+labelidx], color='k', ls=':')
             even = 1-even
 
-        axs[axidx].set_ylim([ymin, ymax])
+        # axs[axidx].set_ylim([ymin, ymax])
         axs[axidx].set_ylabel(stat)
         axs[axidx].legend()
 
@@ -80,14 +85,17 @@ def _acplot(v, s, labels, conditions, ages, stat, bin_width, PAL):
     axs[n].legend()
 
     for labelidx, label in enumerate(labels):
-        axs[n].text(mdpts[labelidx], ymax + (0 + even*1.35), label,
-                    horizontalalignment='center', verticalalignment='bottom')
+        axs[n].text(mdpts[labelidx]/edges[-1], 1.05 + even*0.1, label,
+                    horizontalalignment='center', verticalalignment='bottom',
+                    transform=axs[n].transAxes)
+
         even = 1-even
 
     return fig, axs
 
 
-def _aplot(v, s, labels, ages, stat, bin_width, PAL):
+def _aplot(v, s, labels, ages, stat, bin_width, PAL,
+           plot_error_bars=True):
     vps, sps, ts = {}, {}, {}
 
     for age in ages:
@@ -123,15 +131,16 @@ def _aplot(v, s, labels, ages, stat, bin_width, PAL):
     ymin = ymin - 0.15*yrange
 
     fig, ax = plt.subplots(1, 1, figsize=(7, 4), sharex=True)
-    fig.subplots_adjust(hspace=0.1)
+    fig.subplots_adjust(hspace=0.1, bottom=0.2, top=0.8)
 
     for axidx, age in enumerate(ages):
         vp = vps[age]
         sp = sps[age]
         t = ts[age]
         ax.plot(t, vp, label=age, color=PAL[age])
-        ax.fill_between(t, (vp - sp), (vp + sp),
-                        alpha=0.4, color=PAL[age])
+        if plot_error_bars:
+            ax.fill_between(t, (vp - sp), (vp + sp),
+                            alpha=0.4, color=PAL[age])
 
     even = 0
     for labelidx, label in enumerate(labels):
@@ -152,14 +161,16 @@ def _aplot(v, s, labels, ages, stat, bin_width, PAL):
     ax.legend()
 
     for labelidx, label in enumerate(labels):
-        ax.text(mdpts[labelidx], ymax + (0 + even*1.35), label,
-                horizontalalignment='center', verticalalignment='bottom')
+        ax.text(mdpts[labelidx]/edges[-1], 1.05 + even*0.1, label,
+                horizontalalignment='center', verticalalignment='bottom',
+                transform=ax.transAxes)
         even = 1-even
 
     return fig, ax
 
 
-def _cplot(v, s, labels, conditions, stat, bin_width, PAL):
+def _cplot(v, s, labels, conditions, stat, bin_width, PAL,
+           plot_error_bars=True):
     vps, sps, ts = {}, {}, {}
 
     for condition in conditions:
@@ -197,15 +208,16 @@ def _cplot(v, s, labels, conditions, stat, bin_width, PAL):
     ymin = ymin - 0.15*yrange
 
     fig, ax = plt.subplots(1, 1, figsize=(7, 4), sharex=True)
-    fig.subplots_adjust(hspace=0.1)
+    fig.subplots_adjust(hspace=0.1, bottom=0.2, top=0.8)
 
     for condidx, condition in enumerate(conditions):
         vp = vps[condition]
         sp = sps[condition]
         t = ts[condition]
         ax.plot(t, vp, label=condition, color=PAL[condition])
-        ax.fill_between(t, (vp - sp), (vp + sp),
-                        alpha=0.4, color=PAL[condition])
+        if plot_error_bars:
+            ax.fill_between(t, (vp - sp), (vp + sp),
+                            alpha=0.4, color=PAL[condition])
 
     even = 0
     for labelidx, label in enumerate(labels):
@@ -226,14 +238,16 @@ def _cplot(v, s, labels, conditions, stat, bin_width, PAL):
     ax.legend()
 
     for labelidx, label in enumerate(labels):
-        ax.text(mdpts[labelidx], ymax + (0 + even*1.35), label,
-                horizontalalignment='center', verticalalignment='bottom')
+        ax.text(mdpts[labelidx]/edges[-1], 1.05 + even*0.1, label,
+                horizontalalignment='center', verticalalignment='bottom',
+                transform=ax.transAxes)
         even = 1-even
 
     return fig, ax
 
 
-def _plot(v, s, labels, stat, bin_width, PAL):
+def _plot(v, s, labels, stat, bin_width, PAL,
+          plot_error_bars=True):
     vps, sps, ts = [], [], []
     right_t = 0
 
@@ -262,14 +276,15 @@ def _plot(v, s, labels, stat, bin_width, PAL):
     ymin = ymin - 0.15*yrange
 
     fig, ax = plt.subplots(1, 1, figsize=(7, 4), sharex=True)
-    fig.subplots_adjust(hspace=0.1)
+    fig.subplots_adjust(hspace=0.1, bottom=0.2, top=0.8)
 
     vp = np.hstack(vps)
     sp = np.hstack(sps)
     t = np.hstack(ts)
     ax.plot(t, vp, label=stat, color=PAL)
-    ax.fill_between(t, (vp - sp), (vp + sp),
-                    alpha=0.4, color=PAL)
+    if plot_error_bars:
+        ax.fill_between(t, (vp - sp), (vp + sp),
+                        alpha=0.4, color=PAL)
 
     even = 0
     for labelidx, label in enumerate(labels):
@@ -290,32 +305,10 @@ def _plot(v, s, labels, stat, bin_width, PAL):
     ax.legend()
 
     for labelidx, label in enumerate(labels):
-        ax.text(mdpts[labelidx], ymax + (0 + even*1.35), label,
-                horizontalalignment='center', verticalalignment='bottom')
+        ax.text(mdpts[labelidx]/edges[-1], 1.05 + even*0.1, label,
+                horizontalalignment='center', verticalalignment='bottom',
+                transform=ax.transAxes)
         even = 1-even
-
-    return fig, ax
-
-
-def _acbar(v, s, ages, conditions, stat, PAL):
-    fig, ax = plt.subplots(1, 1, figsize=(7, 5))
-    crects = {}
-    agap = (len(conditions)+0.5)
-    for ageidx, age in enumerate(ages):
-        for condix, condition in enumerate(conditions):
-            vp = v.loc[(age, condition), :].values
-            sp = s.loc[(age, condition), :].values
-            crects[condition] = ax.bar(condix + ageidx*agap,
-                                       vp, 1, yerr=sp, label=condition,
-                                       color=PAL[condition])
-
-    axes = ax.axis()
-    axes = (axes[0], axes[1], axes[2], axes[3]*1.25)
-    ax.axis(axes)
-    ax.set_xticks(np.arange(len(ages))*agap + agap/2.0)
-    ax.set_xticklabels(tuple(ages))
-    ax.set_title(stat)
-    ax.legend(crects.values(), crects.keys(), frameon=True)
 
     return fig, ax
 

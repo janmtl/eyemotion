@@ -2,7 +2,9 @@
 
 import numpy as np
 import pandas as pd
-from plotting import allplots, EPrime_acplot, acplot, cplot, aplot, plot
+from matplotlib import pyplot as plt
+from plotting import allplots, saveplots, PLOTS
+import plotting
 import os
 
 
@@ -64,19 +66,18 @@ def calibrate_Biopac_events(events, out, channel, stat):
 
 def clean(events, channel, stat, outlier_threshold):
     col = channel+" "+stat
+
+    groupcols = ["Age", "Condition", "Label", "Bin_Index"]
+    allcols = ["Age", "Condition", "Label", "Bin_Index", col]
     output = events.copy(deep=True)
-    means = output.groupby(["Age", "Condition", "Label", "Bin_Index"])\
-                  .mean().reset_index()
+    means = output[allcols].groupby(groupcols).mean().reset_index()
     means.rename(columns={col: col+" mean"}, inplace=True)
 
-    stds = output.groupby(["Age", "Condition", "Label", "Bin_Index"])\
-                 .std().reset_index()
+    stds = output[allcols].groupby(groupcols).std().reset_index()
     stds.rename(columns={col: col+" std"}, inplace=True)
 
-    output = pd.merge(output, means, how="left",
-                      on=["Age", "Condition", "Label", "Bin_Index"])
-    output = pd.merge(output, stds, how="left",
-                      on=["Age", "Condition", "Label", "Bin_Index"])
+    output = pd.merge(output, means, how="left", on=groupcols)
+    output = pd.merge(output, stds, how="left", on=groupcols)
 
     output["z-score"] = np.abs((output[col] - output[col+" mean"])
                                .div(output[col+" std"], axis=0))
@@ -183,9 +184,10 @@ def attach_EPrime(events, out, on):
     ep["Order"] = ep["Order"].astype(np.float)
     ep["Subject"] = ep["Subject"].astype(np.int)
 
-    s = ["ID", "Order"]
-    s.remove(on)
-    events.drop(s, axis=1, inplace=True)
+    if on == "Order":
+        events.drop("ID", axis=1, inplace=True)
+    else:
+        events.drop("Order", axis=1, inplace=True)
 
     output = pd.merge(events, ep, how="left", on=["Subject", on])
     return output
@@ -201,10 +203,11 @@ def attach_iaps(events, path):
     return output
 
 
-def saveformats(events, dirpath, basename, valuecolumn):
-    lf_name = basename + "-Longformat.csv"
+def saveformats(events, dirpath, channel, stat, basename, valuecolumn):
+    col = channel + "-" + stat
+    lf_name = basename + "-" + col + "-Longformat.csv"
     # sf_name = "Shortformat-"+basename+".csv"
-    ssf_name = basename + "-Shorterformat.csv"
+    ssf_name = basename + "-" + col + "-Shorterformat.csv"
 
     # Longformat
     longformat = events.copy(deep=True)
@@ -228,9 +231,49 @@ def saveformats(events, dirpath, basename, valuecolumn):
                                            columns=["Condition", "Label",
                                                     "Bin_Index"],
                                            values=valuecolumn)
-    shorterformat.columns = [col[0]+"_"+col[1]+"_"+str(col[2])
-                             for col in shorterformat.columns.values]
+    shorterformat.columns = [column[0]+"_"+column[1]+"_"+str(column[2])
+                             for column in shorterformat.columns.values]
     shorterformat.reset_index(inplace=True)
     shorterformat.to_csv(os.path.join(dirpath, ssf_name))
 
     return longformat, shorterformat
+
+
+def EPrime_acplot(events, col, basename, withID=True):
+    if withID:
+        g = events.copy(deep=True)
+    else:
+        g = events.loc[:, ["Subject", "Age", "Condition", col]].\
+            groupby(["Subject", "Age", "Condition"]).mean().reset_index()
+    conditions = ['Distract', 'Rethink', 'Attend']
+    v = g.loc[:, ["Age", "Condition", col]].\
+        groupby(["Age", "Condition"]).mean()
+    s = g.loc[:, ["Age", "Condition", col]].\
+        groupby(["Age", "Condition"]).sem()
+    ages = ["OA", "YA"]
+
+    return _acbar(v, s, ages, conditions, col,
+                  PLOTS["AgexConditionxTime"][basename])
+
+
+def _acbar(v, s, ages, conditions, stat, PAL):
+    fig, ax = plt.subplots(1, 1, figsize=(7, 5))
+    crects = {}
+    agap = (len(conditions)+0.5)
+    for ageidx, age in enumerate(ages):
+        for condix, condition in enumerate(conditions):
+            vp = v.loc[(age, condition), :].values
+            sp = s.loc[(age, condition), :].values
+            crects[condition] = ax.bar(condix + ageidx*agap,
+                                       vp, 1, yerr=sp, label=condition,
+                                       color=PAL[age][condition])
+
+    axes = ax.axis()
+    axes = (axes[0], axes[1], axes[2], axes[3]*1.25)
+    ax.axis(axes)
+    ax.set_xticks(np.arange(len(ages))*agap + agap/2.0)
+    ax.set_xticklabels(tuple(ages))
+    ax.set_title(stat)
+    ax.legend(crects.values(), crects.keys(), frameon=True)
+
+    return fig, ax
