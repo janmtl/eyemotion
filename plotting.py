@@ -33,6 +33,7 @@ def acplot(events, labels, stat, bin_width, PAL, on, withID,
     return _acplot(v, s, labels, conditions, ages, stat, bin_width, PAL,
                    plot_error_bars)
 
+
 def cplot(events, labels, stat, bin_width, PAL, on, withID,
           plot_error_bars=True):
     sel = np.in1d(events["Label"], labels)
@@ -83,6 +84,7 @@ def aplot(events, labels, stat, bin_width, PAL, on, withID,
     s = s.sort_index(axis=1, level=["Label", "Bin_Index"])
 
     return _aplot(v, s, labels, ages, stat, bin_width, PAL, plot_error_bars)
+
 
 def plot(events, labels, stat, bin_width, PAL, on, withID,
          plot_error_bars=True):

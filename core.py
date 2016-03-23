@@ -81,7 +81,7 @@ def _acplot(v, s, labels, conditions, ages, stat, bin_width, PAL,
     n = len(ages)-1
     even = 0
     axs[n].set_xlim([edges[0], edges[-1]])
-    axs[n].set_xlabel('Time [ms]')
+    axs[n].set_xlabel('Time [s]')
     axs[n].legend()
 
     for labelidx, label in enumerate(labels):
@@ -157,7 +157,7 @@ def _aplot(v, s, labels, ages, stat, bin_width, PAL,
     # Add the label labels
     even = 0
     ax.set_xlim([edges[0], edges[-1]])
-    ax.set_xlabel('Time [ms]')
+    ax.set_xlabel('Time [s]')
     ax.legend()
 
     for labelidx, label in enumerate(labels):
@@ -234,7 +234,7 @@ def _cplot(v, s, labels, conditions, stat, bin_width, PAL,
     # Add the label labels
     even = 0
     ax.set_xlim([edges[0], edges[-1]])
-    ax.set_xlabel('Time [ms]')
+    ax.set_xlabel('Time [s]')
     ax.legend()
 
     for labelidx, label in enumerate(labels):
@@ -301,7 +301,7 @@ def _plot(v, s, labels, stat, bin_width, PAL,
     # Add the label labels
     even = 0
     ax.set_xlim([edges[0], edges[-1]])
-    ax.set_xlabel('Time [ms]')
+    ax.set_xlabel('Time [s]')
     ax.legend()
 
     for labelidx, label in enumerate(labels):

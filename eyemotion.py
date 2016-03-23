@@ -30,8 +30,7 @@ def get_calibrated_BeGaze_events(out, task_name):
         div(events["Black"] - events["White"], axis=0)
     events.drop(["Black", "White"], axis=1, inplace=True)
 
-    events.loc[:, ["ID", "Order"]] = events.loc[:, ["ID", "Order"]]\
-        .astype(np.float)
+    events.loc[:, "Order"] = events.loc[:, "Order"].astype(np.float)
     sel = events["Subject"] > 199
     events.loc[sel, "Age"] = "OA"
     events.loc[~sel, "Age"] = "YA"
@@ -153,11 +152,11 @@ def get_EPrime_events(out):
     ep3.dropna(axis=0, how='all', inplace=True)
 
     ep = pd.merge(ep1, ep2, how="inner", on=["ID", "Subject", "Condition"])
-    events = pd.merge(ep, ep3, how="inner", on=["ID", "Subject", "Condition"])
-    sel = events["Subject"] > 199
-    events.loc[sel, "Age"] = "OA"
-    events.loc[~sel, "Age"] = "YA"
-    return events
+    output = pd.merge(ep, ep3, how="inner", on=["ID", "Subject", "Condition"])
+    sel = output["Subject"] > 199
+    output.loc[sel, "Age"] = "OA"
+    output.loc[~sel, "Age"] = "YA"
+    return output
 
 
 def attach_EPrime(events, out, on):
@@ -180,16 +179,15 @@ def attach_EPrime(events, out, on):
 
     ep = pd.merge(ep1, ep2, how="inner", on=["ID", "Order", "Subject"])
     ep = pd.merge(ep, ep3, how="inner", on=["ID", "Order", "Subject"])
-    ep["ID"] = ep["ID"].astype(np.float)
-    ep["Order"] = ep["Order"].astype(np.float)
     ep["Subject"] = ep["Subject"].astype(np.int)
 
+    output = events.copy(deep=True)
     if on == "Order":
-        events.drop("ID", axis=1, inplace=True)
+        output.drop("ID", axis=1, inplace=True)
     else:
-        events.drop("Order", axis=1, inplace=True)
+        output.drop("Order", axis=1, inplace=True)
 
-    output = pd.merge(events, ep, how="left", on=["Subject", on])
+    output = pd.merge(output, ep, how="left", on=["Subject", on])
     return output
 
 
@@ -200,6 +198,19 @@ def attach_iaps(events, path):
                                 "aro_y", "aro_o", "aro_t"])
     output = pd.merge(events, iaps, how="left", left_on="ID", right_on="IAPS")
     output.drop("IAPS", axis=1, inplace=True)
+    return output
+
+
+def attach_counterbalance(events, path):
+    # Import the counterbalance data.
+    oa = pd.read_excel(path, sheetname="OA")
+    ya = pd.read_excel(path, sheetname="YA")
+    cols = ["Subj ID", "CB Cond.", "PPT", "Run Date", "Run Time"]
+    oa = oa[cols]
+    ya = ya[cols]
+    oa.rename(columns={"Subj ID": "Subject"}, inplace=True)
+    ya.rename(columns={"Subj ID": "Subject"}, inplace=True)
+    output = pd.merge(events, pd.concat([oa, ya]), how="left", on="Subject")
     return output
 
 
