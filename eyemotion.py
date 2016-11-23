@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from matplotlib import pyplot as plt
 from plotting import allplots, saveplots, PLOTS
 import plotting
@@ -9,6 +10,32 @@ import os
 
 
 SECRET_KEY = -1234567
+
+
+def get_calibrated_BeGaze_events2(out):
+    events = out['Eyemotion']['LDiameter'].loc["VAL", :, :].copy(deep=True)
+    events["stat"] = events["stat"].astype(np.float)
+    events["Bin_Index"] = events["Bin_Index"].astype(np.int)
+    events.rename(columns={"stat": "pupil diameter [mm]"}, inplace=True)
+
+    cal = events[events["Condition"] == "Fix"].copy(deep=True).reset_index(drop=True)
+    events = events[events["Condition"] != "Fix"].reset_index(drop=True)
+    cal = cal.pivot_table(index="Subject", columns="Label",
+                          values="pupil diameter [mm]").\
+        reset_index()
+
+    events = pd.merge(events, cal, how="left", on="Subject")
+    events["pupil response"] = events["pupil diameter [mm]"] \
+        - events["White"]
+    events["pupil response [%]"] = 100*events["pupil response"].\
+        div(events["Black"] - events["White"], axis=0)
+    events.drop(["Black", "White"], axis=1, inplace=True)
+
+    events.loc[:, "Order"] = events.loc[:, "Order"].astype(np.float)
+    sel = events["Subject"] > 199
+    events.loc[sel, "Age"] = "OA"
+    events.loc[~sel, "Age"] = "YA"
+    return events
 
 
 def get_calibrated_BeGaze_events(out, task_name):
@@ -288,3 +315,100 @@ def _acbar(v, s, ages, conditions, stat, PAL):
     ax.legend(crects.values(), crects.keys(), frameon=True)
 
     return fig, ax
+
+
+def dfgridplot(data, x, y, plotfn, aggfuncs,
+               rownames=None, colnames=None, linenames=None,
+               bin_width=0.5,
+               **kwargs):
+
+    aggsindex = None
+    if rownames:
+        if type(rownames) is str:
+            rownames = list(rownames)
+        rows = data[rownames].drop_duplicates()
+        aggsindex = rownames
+    else:
+        rownames = []
+        rows = [None]
+
+    if colnames:
+        if type(colnames) is str:
+            colnames = list(colnames)
+        cols = data[colnames].drop_duplicates()
+        if aggsindex:
+            aggsindex = aggsindex + colnames
+        else:
+            aggsindex = colnames
+    else:
+        colnames = []
+        cols = [None]
+
+    if linenames:
+        if type(linenames) is str:
+            linenames = list(linenames)
+        if aggsindex:
+            aggsindex = aggsindex + linenames
+        else:
+            aggsindex = linenames
+    else:
+        linenames = []
+
+    aggs = {}
+    for key, func in aggfuncs.iteritems():
+        aggs[key] = data.pivot_table(index=aggsindex,
+                                     columns=x, values=y, aggfunc=func)
+        aggs[key].columns = aggs[key].columns.droplevel(0)
+
+    fig, axs = plt.subplots(len(rows), len(cols), **kwargs)
+    # when we want to go row-wise in plt.subplots it still produce a
+    # 1-dim array so we have to artifically make it 2-dim
+    if len(rows) == 1:
+        axsv = [axs]
+    else:
+        axsv = axs
+    axsdf = pd.DataFrame(axsv, index=rows, columns=cols)
+
+    for rowname, axrow in axsdf.iteritems():
+        for colname, ax in axrow.iteritems():
+            if not rowname:
+                rowname = ()
+            if not colname:
+                colname = ()
+            datasel = colname + rowname + (slice(None),)*len(linenames)
+            plotdata = {}
+            for key, aggdata in aggs.iteritems():
+                plotdata[key] = aggdata.loc[datasel, :]
+                if type(plotdata[key]) is pd.DataFrame:
+                    plotdata[key].index = plotdata[key]\
+                        .index.droplevel(range(len(rownames) + len(colnames)))
+            plotfn(ax, plotdata, rowname, colname, bin_width, **kwargs)
+
+    return fig, axs
+
+
+def plt_eyemotion(ax, plotdata, rowname, colname, bin_width, **kwargs):
+    # PAL = sns.color_palette()
+    PAL = [(0.0, 0.0, 0.0), (0.35, 0.35, 0.35), (0.5, 0.5, 0.5)]
+    MARKERS = ["o", "s", "d"]
+    if type(plotdata['mean']) is pd.DataFrame:
+        means = plotdata['mean'].sortlevel(0, axis=1)
+        sems = plotdata['sem'].sortlevel(0, axis=1)
+
+        ax.set_title(str(rowname)+" "+str(colname))
+        for idx, (linename, linedata) in enumerate(means.iterrows()):
+            y = linedata.values
+            s = sems.loc[linename, :].values
+            t = np.linspace(0.0, bin_width*len(linedata), len(linedata))
+            ax.plot(t, y, label=linename, c=PAL[idx],
+                    marker=MARKERS[idx], markersize=5.0)
+            ax.fill_between(t, y-s, y+s,
+                            color=(0.5, 0.5, 0.5), alpha=0.35)
+
+    else:
+        means = plotdata['mean'].values
+        sems = plotdata['sem'].values
+        t = np.linspace(0.0, 0.5*len(means), len(means))
+        ax.set_title(str(rowname)+" "+str(colname))
+        ax.plot(t, means)
+        ax.fill_between(t, means-sems, means+sems, alpha=0.4)

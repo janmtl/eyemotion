@@ -128,15 +128,25 @@ PLOTS = {
         },
         "Eyemotion": {
             "OA": {
-                "Attend": "#CB0103",
-                "Rethink": "#1E659F",
-                "Distract": "#349631"
+                "Attend": "#000000",
+                "Rethink": "#666666",
+                "Distract": "#999999"
             },
             "YA": {
-                "Attend": "#FE3436",
-                "Rethink": "#5198D2",
-                "Distract": "#67C964"
+                "Attend": "#000000",
+                "Rethink": "#666666",
+                "Distract": "#999999"
             }
+            # "OA": {
+            #     "Attend": "#CB0103",
+            #     "Rethink": "#1E659F",
+            #     "Distract": "#349631"
+            # },
+            # "YA": {
+            #     "Attend": "#FE3436",
+            #     "Rethink": "#5198D2",
+            #     "Distract": "#67C964"
+            # }
         },
         "Slideshow": {
             "OA": {
